@@ -28,14 +28,9 @@ options = [
         "browserVersion": "11.0",
         "sauce:options": sauce_options
     }, {
-        "platformName": "OS X 10.11",
+        "platformName": "OS X 10.12",
         "browserName": "safari",
-        "browserVersion": "10.0",
-        "sauce:options": sauce_options
-    }, {
-        "platformName": "OS X 10.11",
-        "browserName": "chrome",
-        "browserVersion": "54.0",
+        "browserVersion": "11.0",
         "sauce:options": sauce_options
     }]
 
