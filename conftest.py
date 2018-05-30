@@ -5,34 +5,45 @@ from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.remote.remote_connection import RemoteConnection
 
-browsers = [
+
+sauce_options = {
+    "seleniumVersion": "3.11.0",
+    "build": "Pytest W3C POC"
+}
+
+options = [
     {
-        "platform": "Windows 10",
+        "platformName": "Windows 10",
         "browserName": "MicrosoftEdge",
-        "version": "14.14393"
+        "browserVersion": "14.14393", 
+        "sauce:options": sauce_options
     }, {
-        "platform": "Windows 10",
+        "platformName": "Windows 10",
         "browserName": "firefox",
-        "version": "49.0"
+        "browserVersion": "49.0",
+        "sauce:options": sauce_options
     }, {
-        "platform": "Windows 7",
+        "platformName": "Windows 7",
         "browserName": "internet explorer",
-        "version": "11.0"
+        "browserVersion": "11.0",
+        "sauce:options": sauce_options
     }, {
-        "platform": "OS X 10.11",
+        "platformName": "OS X 10.11",
         "browserName": "safari",
-        "version": "10.0"
+        "browserVersion": "10.0",
+        "sauce:options": sauce_options
     }, {
-        "platform": "OS X 10.11",
+        "platformName": "OS X 10.11",
         "browserName": "chrome",
-        "version": "54.0"
+        "browserVersion": "54.0",
+        "sauce:options": sauce_options
     }]
 
 def pytest_generate_tests(metafunc):
     if 'driver' in metafunc.fixturenames:
         metafunc.parametrize('browser_config',
-                             browsers,
-                             ids=_generate_param_ids('broswerConfig', browsers),
+                             options,
+                             ids=_generate_param_ids('broswerConfig', options),
                              scope='function')
 
 
@@ -44,24 +55,20 @@ def _generate_param_ids(name, values):
 def driver(request, browser_config):
     # if the assignment below does not make sense to you please read up on object assignments.
     # The point is to make a copy and not mess with the original test spec.
-    desired_caps = dict()
-    desired_caps.update(browser_config)
+    browser_options = dict()
+    browser_options.update(browser_config)
     test_name = request.node.name
-    build_tag = environ.get('BUILD_TAG', None)
-    tunnel_id = environ.get('TUNNEL_IDENTIFIER', None)
     username = environ.get('SAUCE_USERNAME', None)
     access_key = environ.get('SAUCE_ACCESS_KEY', None)
 
-    selenium_endpoint = "https://%s:%s@ondemand.saucelabs.com:443/wd/hub" % (username, access_key)
-    desired_caps['build'] = build_tag
-    # we can move this to the config load or not, also messing with this on a test to test basis is possible :)
-    desired_caps['tunnelIdentifier'] = tunnel_id
-    desired_caps['name'] = test_name
+    selenium_endpoint = "http://{}:{}@ondemand.saucelabs.com/wd/hub".format(username, access_key)
+    browser_options['sauce:options']['build'] = "Python W3C"
+    browser_options['sauce:options']['name'] = test_name
 
     executor = RemoteConnection(selenium_endpoint, resolve_ip=False)
     browser = webdriver.Remote(
         command_executor=executor,
-        desired_capabilities=desired_caps
+        desired_capabilities=browser_options
     )
 
     # This is specifically for SauceLabs plugin.
