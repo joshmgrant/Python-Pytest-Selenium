@@ -50,8 +50,7 @@ def _generate_param_ids(name, values):
 def driver(request, browser_config):
     # if the assignment below does not make sense to you please read up on object assignments.
     # The point is to make a copy and not mess with the original test spec.
-    browser_options = dict()
-    browser_options.update(browser_config)
+    browser_options = browser_config.copy()
     test_name = request.node.name
     username = environ.get('SAUCE_USERNAME', None)
     access_key = environ.get('SAUCE_ACCESS_KEY', None)
