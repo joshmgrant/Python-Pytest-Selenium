@@ -14,8 +14,8 @@ def driver(request):
     
     browser = {
         "platform": "Windows 10",
-        "browserName": "firefox",
-        "version": "49.0"
+        "browserName": "chrome",
+        "version": "latest"
     }
 
     desired_caps.update(browser)
@@ -25,11 +25,14 @@ def driver(request):
     username = environ.get('SAUCE_USERNAME', None)
     access_key = environ.get('SAUCE_ACCESS_KEY', None)
 
-    selenium_endpoint = "http://{}:{}@ondemand.saucelabs.com:80/wd/hub".format(username, access_key)
+    selenium_endpoint = "http://ondemand.saucelabs.com/wd/hub"
+
     desired_caps['build'] = build_tag
     # we can move this to the config load or not, also messing with this on a test to test basis is possible :)
     desired_caps['tunnelIdentifier'] = tunnel_id
     desired_caps['name'] = test_name
+    desired_caps['username'] = username
+    desired_caps['accesskey'] = access_key
 
     executor = RemoteConnection(selenium_endpoint, resolve_ip=False)
     browser = webdriver.Remote(
@@ -37,24 +40,16 @@ def driver(request):
         desired_capabilities=desired_caps
     )
     yield browser
+    
+    # use the test result to send the pass/fail status to Sauce Labs
+    sauce_result = "failed" if request.node.rep_call.failed else "passed"
+    browser.execute_script("sauce:job-result={}".format(sauce_result))
+    browser.quit()
 
-    # This is specifically for SauceLabs plugin.
-    # In case test fails after selenium session creation having this here will help track it down.
-    # creates one file per test non ideal but xdist is awful
-    if browser:
-        with open("{}.testlog".format(browser.session_id), 'w') as f:
-            f.write("SauceOnDemandSessionID={} job-name={}\n".format(browser.session_id, test_name))
-    else:
-        raise WebDriverException("Never created!")
 
-    def fin():
-        browser.execute_script("sauce:job-result={}".format(str(not request.node.rep_call.failed).lower()))
-        browser.quit()
-    request.addfinalizer(fin)
-
-@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
 def pytest_runtest_makereport(item, call):
-    # this sets the result as a test attribute for SauceLabs reporting.
+    # this sets the result as a test attribute for Sauce Labs reporting.
     # execute all other hooks to obtain the report object
     outcome = yield
     rep = outcome.get_result()
@@ -62,3 +57,4 @@ def pytest_runtest_makereport(item, call):
     # set an report attribute for each phase of a call, which can
     # be "setup", "call", "teardown"
     setattr(item, "rep_" + rep.when, rep)
+    return rep
